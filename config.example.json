@@ -1,0 +1,5 @@
+{
+  "SUPABASE_URL": "https://<project-ref>.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "<publishable or anon key from Project Settings → API Keys>",
+  "API_BASE_URL": "http://<your laptop's Wi-Fi address>:8000"
+}
