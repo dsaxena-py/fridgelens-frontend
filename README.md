@@ -13,8 +13,12 @@ soft rounded shapes and calm, reduced-motion-aware animation.
   the review screen (boxes on the photo; confirm, change or remove each item; uncertain items
   ask a question that must be answered; add what was missed), and Settings (server address
   with a connection test, appearance, sign out).
-
-Recipes come in step 3.
+- **Step 3:** recipes. A bottom bar switches between Fridge and Recipes. Recipes has three
+  views: **For your fridge** (ranked by ingredient match, with what is missing), **Browse**
+  (search and meal-type filters) and **Saved**. The recipe detail shows a "you have X of Y"
+  indicator, ingredients marked in-fridge / missing / pantry staple, estimated nutrition per
+  serving and steps, with save and **I cooked this** (optional rating, optionally taking the
+  main ingredients out of the fridge). A confirmed scan offers a "See recipes" link.
 
 ## Run it
 
@@ -64,7 +68,7 @@ lib/
   data/auth.dart             Supabase Auth, with friendly error messages
   state/providers.dart       Riverpod providers: settings, auth, backend, fridge
   data/api.dart              backend client with friendly error messages
-  features/                  splash, onboarding, auth, fridge, scan (camera, review), settings
+  features/                  splash, onboarding, auth, fridge, scan (camera, review), recipes, settings
 assets/
   google_fonts/              Nunito Sans Regular and Medium, bundled (no runtime downloads)
   brand/                     launch-screen and icon images
@@ -88,14 +92,18 @@ The widget tests use a fake backend and camera. They cover:
   review (yes/no on uncertain items, changing, removing, adding missed items, and exactly what
   is sent to the backend). Also nothing found, a failed scan, an upload error, and the server
   address check.
+- **Step 3:** empty and no-match states, ranking and match wording, the recipe detail (match
+  summary, ingredients, nutrition, steps), save and unsave, cooking with and without taking
+  ingredients out, browse filters and search, and matches updating when the fridge changes.
 
 They also check light and dark mode and large text on a small phone.
 
 ### Contract test
 
 `test/contract/` runs the app's real HTTP client against a running backend: search, upload a
-photo, confirm, the 409 on a second confirm, add, set and clear a best-before date, remove, and
-an invalid token. It is skipped unless these are set:
+photo, confirm, the 409 on a second confirm, add, set and clear a best-before date, remove,
+recommendations, browsing, recipe detail, save and unsave, "I cooked this", and an invalid token.
+It also checks that the app's "you have X of Y" count agrees with the server's match score. It is skipped unless these are set:
 
 ```bash
 MEALLENS_API_URL=http://127.0.0.1:8000 MEALLENS_TOKEN=<a Supabase access token> \

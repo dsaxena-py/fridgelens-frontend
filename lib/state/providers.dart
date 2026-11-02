@@ -75,12 +75,28 @@ class InventoryNotifier extends AsyncNotifier<List<InventoryItem>> {
   @override
   Future<List<InventoryItem>> build() => ref.watch(apiProvider).inventory();
 
+  /// The fridge changed, so recipe matches and "in fridge" marks are out of date.
+  void _changed() {
+    ref.invalidate(recommendationsProvider);
+    ref.invalidate(recipeDetailProvider);
+  }
+
   /// After a confirmed scan the backend returns the whole fridge; show it without refetching.
-  void replace(List<InventoryItem> items) => state = AsyncData(items);
+  void replace(List<InventoryItem> items) {
+    state = AsyncData(items);
+    _changed();
+  }
 
   Future<void> add(int ingredientId) async {
     await _api.addToFridge(ingredientId);
     state = AsyncData(await _api.inventory());
+    _changed();
+  }
+
+  /// Reload from the server, e.g. after cooking took ingredients out.
+  Future<void> reload() async {
+    state = AsyncData(await _api.inventory());
+    _changed();
   }
 
   Future<void> setExpiry(InventoryItem item, DateTime? date) async {
@@ -94,6 +110,7 @@ class InventoryNotifier extends AsyncNotifier<List<InventoryItem>> {
     state = AsyncData([for (final i in before) if (i.id != item.id) i]);
     try {
       await _api.removeItem(item.id);
+      _changed();
     } catch (_) {
       state = AsyncData(before);
       rethrow;
@@ -102,3 +119,31 @@ class InventoryNotifier extends AsyncNotifier<List<InventoryItem>> {
 }
 
 final inventoryProvider = AsyncNotifierProvider<InventoryNotifier, List<InventoryItem>>(InventoryNotifier.new);
+
+// ---------- Recipes ----------
+
+final recommendationsProvider = FutureProvider<Recommendations>((ref) => ref.watch(apiProvider).recommendations());
+
+typedef BrowseQuery = ({String query, String? mealType});
+
+class BrowseQueryNotifier extends Notifier<BrowseQuery> {
+  @override
+  BrowseQuery build() => (query: '', mealType: null);
+
+  void setQuery(String query) => state = (query: query.trim(), mealType: state.mealType);
+  void setMealType(String? mealType) => state = (query: state.query, mealType: mealType);
+}
+
+final browseQueryProvider = NotifierProvider<BrowseQueryNotifier, BrowseQuery>(BrowseQueryNotifier.new);
+
+final browseRecipesProvider = FutureProvider<List<RecipeSummary>>((ref) {
+  final q = ref.watch(browseQueryProvider);
+  return ref.watch(apiProvider).recipes(query: q.query, mealType: q.mealType);
+});
+
+final savedRecipesProvider = FutureProvider<List<RecipeSummary>>((ref) => ref.watch(apiProvider).savedRecipes());
+
+/// Disposed when the screen closes, so reopening a recipe shows its current saved state and
+/// what is in the fridge now.
+final recipeDetailProvider =
+    FutureProvider.autoDispose.family<RecipeDetail, int>((ref, id) => ref.watch(apiProvider).recipe(id));

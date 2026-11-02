@@ -97,7 +97,129 @@ class FakeApi implements MealLensApi {
     removed.add(itemId);
     fridge.removeWhere((f) => f.id == itemId);
   }
+
+  // ---------- Recipes ----------
+
+  final saved = <int>{};
+  final cookedLog = <({int recipeId, int? rating, bool removeUsed})>[];
+
+  bool _has(String slug) => fridge.any((f) => f.ingredient.slug == slug);
+
+  @override
+  Future<Recommendations> recommendations({int limit = 30}) async {
+    final ranked = <Recommendation>[];
+    for (final r in recipeBook) {
+      final counted = [for (final i in r.ingredients) if (!i.isPantryStaple) i];
+      final have = counted.where((i) => _has(i.ingredient.slug)).length;
+      if (have == 0) continue;
+      final missing = [for (final i in counted) if (!_has(i.ingredient.slug)) i.ingredient.name];
+      ranked.add(Recommendation(
+        rank: 0,
+        recipe: r.summary,
+        matchScore: have / counted.length,
+        weightedScore: have / counted.length,
+        missingCount: missing.length,
+        missingIngredients: missing,
+      ));
+    }
+    ranked.sort((a, b) => b.weightedScore.compareTo(a.weightedScore));
+    return Recommendations(runId: 'run', inventoryCount: fridge.length, items: [
+      for (final (i, r) in ranked.indexed)
+        Recommendation(rank: i + 1, recipe: r.recipe, matchScore: r.matchScore, weightedScore: r.weightedScore,
+            missingCount: r.missingCount, missingIngredients: r.missingIngredients),
+    ]);
+  }
+
+  @override
+  Future<List<RecipeSummary>> recipes({String? query, String? mealType}) async => [
+        for (final r in recipeBook)
+          if ((mealType == null || r.summary.mealType == mealType) &&
+              (query == null || query.isEmpty || r.summary.title.toLowerCase().contains(query.toLowerCase())))
+            r.summary,
+      ];
+
+  @override
+  Future<List<RecipeSummary>> savedRecipes() async => [for (final r in recipeBook) if (saved.contains(r.summary.id)) r.summary];
+
+  @override
+  Future<RecipeDetail> recipe(int id) async {
+    final r = recipeBook.firstWhere((r) => r.summary.id == id, orElse: () => throw ApiException('recipe not found', statusCode: 404));
+    return RecipeDetail(
+      summary: r.summary,
+      steps: r.steps,
+      saved: saved.contains(id),
+      ingredients: [
+        for (final i in r.ingredients)
+          RecipeIngredient(ingredient: i.ingredient, quantity: i.quantity, unit: i.unit, role: i.role, note: i.note,
+              isPantryStaple: i.isPantryStaple, inFridge: _has(i.ingredient.slug)),
+      ],
+    );
+  }
+
+  @override
+  Future<void> setSaved(int recipeId, bool saved) async => saved ? this.saved.add(recipeId) : this.saved.remove(recipeId);
+
+  @override
+  Future<CookedResult> cooked(int recipeId, {int? rating, bool removeUsed = false}) async {
+    cookedLog.add((recipeId: recipeId, rating: rating, removeUsed: removeUsed));
+    if (!removeUsed) return const CookedResult([]);
+    final r = recipeBook.firstWhere((r) => r.summary.id == recipeId);
+    final core = {for (final i in r.ingredients) if (i.role == 'core' && !i.isPantryStaple) i.ingredient.slug};
+    final removedNow = [for (final f in fridge) if (core.contains(f.ingredient.slug)) f.ingredient];
+    fridge.removeWhere((f) => core.contains(f.ingredient.slug));
+    return CookedResult([for (final i in removedNow) IngredientRef(id: i.id, slug: i.slug, name: i.name)]);
+  }
 }
+
+RecipeIngredient _ri(String slug, double qty, String unit, {String role = 'core', String? note, bool staple = false}) {
+  final known = catalog.where((c) => c.slug == slug);
+  final ing = known.isNotEmpty ? known.first : ingredient(100 + slug.length, slug, slug[0].toUpperCase() + slug.substring(1));
+  return RecipeIngredient(
+      ingredient: IngredientRef(id: ing.id, slug: ing.slug, name: ing.name),
+      quantity: qty, unit: unit, role: role, note: note, isPantryStaple: staple, inFridge: false);
+}
+
+RecipeSummary _summary(int id, String title, String meal, double kcal, double protein) => RecipeSummary(
+      id: id,
+      title: title,
+      description: 'A test recipe.',
+      cuisine: 'Test',
+      mealType: meal,
+      servings: 2,
+      prepMinutes: 5,
+      cookMinutes: 10,
+      difficulty: 'easy',
+      dietaryTags: const ['vegetarian'],
+      nutrition: Nutrition(kcal: kcal, proteinG: protein, carbsG: 12, fatG: 9.5, fiberG: 2.25),
+    );
+
+final recipeBook = [
+  (
+    summary: _summary(1, 'Tomato Omelette', 'breakfast', 249.6, 14.4),
+    ingredients: [
+      _ri('egg', 2, 'piece'),
+      _ri('tomato', 1, 'piece', note: 'diced'),
+      _ri('onion', 0.25, 'piece', role: 'supporting'),
+      _ri('salt', 1, 'pinch', staple: true),
+    ],
+    steps: ['Beat the eggs.', 'Cook the tomato and onion.', 'Add the eggs and fold.'],
+  ),
+  (
+    summary: _summary(2, 'Greek Salad', 'lunch', 310, 9),
+    ingredients: [
+      _ri('tomato', 2, 'piece'),
+      _ri('bell_pepper', 1, 'piece'),
+      _ri('onion', 0.5, 'piece'),
+      _ri('feta', 100, 'g'),
+    ],
+    steps: ['Chop everything.', 'Dress and serve.'],
+  ),
+  (
+    summary: _summary(3, 'Pasta Primavera', 'dinner', 540, 18),
+    ingredients: [_ri('pasta', 350, 'g'), _ri('bell_pepper', 1, 'piece')],
+    steps: ['Cook the pasta.', 'Toss with vegetables.'],
+  ),
+];
 
 /// A real 1x1 PNG on disk, standing in for a camera photo.
 File testPhoto() {

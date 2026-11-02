@@ -115,7 +115,12 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       ref.read(inventoryProvider.notifier).replace(fridge);
       if (!mounted) return;
       final n = _keptCount;
-      showMessage(context, n == 0 ? 'Nothing was added to your fridge' : '$n ${n == 1 ? 'ingredient is' : 'ingredients are'} in your fridge');
+      final router = GoRouter.of(context);
+      showMessage(
+        context,
+        n == 0 ? 'Nothing was added to your fridge' : '$n ${n == 1 ? 'ingredient is' : 'ingredients are'} in your fridge',
+        action: n == 0 ? null : SnackBarAction(label: 'See recipes', onPressed: () => router.go('/recipes')),
+      );
       context.go('/home');
     } catch (e) {
       if (mounted) {

@@ -27,6 +27,12 @@ abstract interface class MealLensApi {
   Future<void> addToFridge(int ingredientId);
   Future<void> setExpiry(String itemId, DateTime? expiresAt);
   Future<void> removeItem(String itemId);
+  Future<Recommendations> recommendations({int limit = 30});
+  Future<List<RecipeSummary>> recipes({String? query, String? mealType});
+  Future<List<RecipeSummary>> savedRecipes();
+  Future<RecipeDetail> recipe(int id);
+  Future<void> setSaved(int recipeId, bool saved);
+  Future<CookedResult> cooked(int recipeId, {int? rating, bool removeUsed = false});
 }
 
 /// Checks a server address without signing in; returns the detector the server runs.
@@ -166,5 +172,33 @@ class HttpMealLensApi implements MealLensApi {
   Future<void> removeItem(String itemId) async {
     final h = await _headers();
     await _send(() => _client.delete(_uri('/inventory/$itemId'), headers: h));
+  }
+
+  @override
+  Future<Recommendations> recommendations({int limit = 30}) async =>
+      Recommendations.fromJson(await _get('/recommendations', {'limit': '$limit'}) as Map<String, dynamic>);
+
+  @override
+  Future<List<RecipeSummary>> recipes({String? query, String? mealType}) async =>
+      _list(await _get('/recipes', {'q': query, 'meal_type': mealType, 'limit': '100'}), RecipeSummary.fromJson);
+
+  @override
+  Future<List<RecipeSummary>> savedRecipes() async => _list(await _get('/recipes/saved'), RecipeSummary.fromJson);
+
+  @override
+  Future<RecipeDetail> recipe(int id) async => RecipeDetail.fromJson(await _get('/recipes/$id') as Map<String, dynamic>);
+
+  @override
+  Future<void> setSaved(int recipeId, bool saved) async {
+    final h = await _headers();
+    final uri = _uri('/recipes/$recipeId/save');
+    await _send(() => saved ? _client.put(uri, headers: h) : _client.delete(uri, headers: h));
+  }
+
+  @override
+  Future<CookedResult> cooked(int recipeId, {int? rating, bool removeUsed = false}) async {
+    final body = await _json('POST', '/recipes/$recipeId/cooked', {'rating': rating, 'remove_used': removeUsed});
+    final removed = (body as Map<String, dynamic>)['removed_from_fridge'] as List;
+    return CookedResult([for (final i in removed) IngredientRef.fromJson(i as Map<String, dynamic>)]);
   }
 }

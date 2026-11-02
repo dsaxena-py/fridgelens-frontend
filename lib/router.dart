@@ -3,14 +3,17 @@ import 'package:go_router/go_router.dart';
 
 import 'features/auth/sign_in_screen.dart';
 import 'features/fridge/fridge_screen.dart';
+import 'features/home/home_shell.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/recipes/recipe_detail_screen.dart';
+import 'features/recipes/recipes_screen.dart';
 import 'features/scan/camera_screen.dart';
 import 'features/scan/review_screen.dart';
 import 'features/scan/scan_providers.dart';
 import 'features/settings/settings_screen.dart';
 import 'state/providers.dart';
 
-/// Signed out: onboarding the first time, sign-in after that. Signed in: the fridge.
+/// Signed out: onboarding the first time, sign-in after that. Signed in: the fridge and recipes tabs.
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
   final router = GoRouter(
@@ -34,7 +37,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sign-in',
         builder: (context, state) => SignInScreen(signUp: state.uri.queryParameters['mode'] == 'sign-up'),
       ),
-      GoRoute(path: '/home', builder: (context, state) => const FridgeScreen()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) => HomeShell(shell: shell),
+        branches: [
+          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (context, state) => const FridgeScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/recipes', builder: (context, state) => const RecipesScreen())]),
+        ],
+      ),
+      GoRoute(
+        path: '/recipes/:id',
+        builder: (context, state) => RecipeDetailScreen(recipeId: int.tryParse(state.pathParameters['id']!) ?? -1),
+      ),
       GoRoute(path: '/scan', builder: (context, state) => const CameraScreen()),
       GoRoute(path: '/scan/review', builder: (context, state) => ReviewScreen(args: state.extra! as ScanReviewArgs)),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),

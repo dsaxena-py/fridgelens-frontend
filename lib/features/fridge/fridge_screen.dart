@@ -151,7 +151,7 @@ class _ItemTile extends ConsumerWidget {
     final theme = Theme.of(context);
     final date = item.expiresAt;
     final subtitle = [
-      if (item.quantity != null) '${_qty(item.quantity!)} ${item.unit ?? ''}'.trim(),
+      if (item.quantity != null) formatAmount(item.quantity!, item.unit),
       if (date != null) 'Best before ${DateFormat.MMMd().format(date)}',
       if (item.source == 'manual') 'Added by hand',
     ].join(' · ');
@@ -190,6 +190,4 @@ class _ItemTile extends ConsumerWidget {
       ),
     );
   }
-
-  static String _qty(double q) => q == q.roundToDouble() ? q.toInt().toString() : q.toStringAsFixed(1);
 }

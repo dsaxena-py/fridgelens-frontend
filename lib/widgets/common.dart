@@ -146,3 +146,31 @@ String titleCase(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1
 
 /// Motion that respects the system's reduce-motion setting (§12).
 Duration motion(BuildContext context, Duration d) => MediaQuery.of(context).disableAnimations ? Duration.zero : d;
+
+String mealTypeLabel(String mealType) => titleCase(mealType);
+
+IconData mealTypeIcon(String mealType) => switch (mealType) {
+      'breakfast' => Icons.free_breakfast_outlined,
+      'lunch' => Icons.lunch_dining_outlined,
+      'dinner' => Icons.dinner_dining_outlined,
+      'snack' => Icons.cookie_outlined,
+      _ => Icons.restaurant_outlined,
+    };
+
+/// "2 pieces", "½ cup", "1 clove", "200 g": quantities as people say them.
+String formatAmount(double quantity, String? unit) {
+  final q = _quantity(quantity);
+  if (unit == null || unit.isEmpty) return q;
+  const plurals = {'piece': 'pieces', 'clove': 'cloves', 'slice': 'slices', 'cup': 'cups', 'pinch': 'pinches'};
+  final plural = quantity > 1 ? plurals[unit] : null;
+  return '$q ${plural ?? unit}';
+}
+
+String _quantity(double q) {
+  if (q == q.roundToDouble()) return q.toInt().toString();
+  const fractions = {'0.25': '¼', '0.33': '⅓', '0.50': '½', '0.66': '⅔', '0.67': '⅔', '0.75': '¾'};
+  final whole = q.floor();
+  final frac = fractions[(q - whole).toStringAsFixed(2)];
+  if (frac != null) return whole == 0 ? frac : '$whole$frac';
+  return q.toStringAsFixed(1);
+}

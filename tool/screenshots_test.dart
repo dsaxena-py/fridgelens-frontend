@@ -133,4 +133,35 @@ void main() {
       await _shot(tester, '14_review_question_$mode');
     });
   }
+
+  for (final b in Brightness.values) {
+    final mode = b.name;
+
+    testWidgets('recipes $mode', (tester) async {
+      final auth = FakeAuth();
+      await auth.signIn('cook@example.com', 'correct-horse');
+      final api = FakeApi()
+        ..stock('egg')
+        ..stock('tomato')
+        ..stock('bell_pepper');
+      await pumpApp(tester, brightness: b, prefs: {'onboarding_seen': true}, auth: auth, api: api);
+      await tester.tap(find.text('Recipes'));
+      await _shot(tester, '20_recipes_for_you_$mode');
+      await tester.tap(find.text('Tomato Omelette'));
+      await _shot(tester, '21_recipe_detail_$mode');
+      await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+      await _shot(tester, '22_recipe_detail_scrolled_$mode');
+      await tester.tap(find.text('I cooked this'));
+      await _shot(tester, '23_cooked_sheet_$mode');
+      await tester.tap(find.byTooltip('4 of 5'));
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Browse'));
+      await _shot(tester, '24_browse_$mode');
+      await tester.tap(find.text('Saved'));
+      await _shot(tester, '25_saved_empty_$mode');
+    });
+  }
 }

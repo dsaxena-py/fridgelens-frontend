@@ -159,6 +159,176 @@ class Scan {
   bool get failed => status == 'failed';
 }
 
+class Nutrition {
+  const Nutrition({required this.kcal, required this.proteinG, required this.carbsG, required this.fatG, required this.fiberG});
+
+  factory Nutrition.fromJson(Map<String, dynamic> j) => Nutrition(
+        kcal: _d(j['kcal']),
+        proteinG: _d(j['protein_g']),
+        carbsG: _d(j['carbs_g']),
+        fatG: _d(j['fat_g']),
+        fiberG: _d(j['fiber_g']),
+      );
+
+  final double kcal, proteinG, carbsG, fatG, fiberG;
+}
+
+class RecipeSummary {
+  const RecipeSummary({
+    required this.id,
+    required this.title,
+    this.description,
+    this.cuisine,
+    required this.mealType,
+    required this.servings,
+    required this.prepMinutes,
+    required this.cookMinutes,
+    required this.difficulty,
+    required this.dietaryTags,
+    this.imageUrl,
+    this.nutrition,
+  });
+
+  factory RecipeSummary.fromJson(Map<String, dynamic> j) => RecipeSummary(
+        id: j['id'] as int,
+        title: j['title'] as String,
+        description: j['description'] as String?,
+        cuisine: j['cuisine'] as String?,
+        mealType: j['meal_type'] as String,
+        servings: j['servings'] as int,
+        prepMinutes: j['prep_minutes'] as int,
+        cookMinutes: j['cook_minutes'] as int,
+        difficulty: j['difficulty'] as String,
+        dietaryTags: _strings(j['dietary_tags']),
+        imageUrl: j['image_url'] as String?,
+        nutrition: j['nutrition_per_serving'] == null
+            ? null
+            : Nutrition.fromJson(j['nutrition_per_serving'] as Map<String, dynamic>),
+      );
+
+  final int id;
+  final String title;
+  final String? description;
+  final String? cuisine;
+  final String mealType;
+  final int servings;
+  final int prepMinutes;
+  final int cookMinutes;
+  final String difficulty;
+  final List<String> dietaryTags;
+  final String? imageUrl;
+  final Nutrition? nutrition;
+
+  int get totalMinutes => prepMinutes + cookMinutes;
+}
+
+class Recommendation {
+  const Recommendation({
+    required this.rank,
+    required this.recipe,
+    required this.matchScore,
+    required this.weightedScore,
+    required this.missingCount,
+    required this.missingIngredients,
+  });
+
+  factory Recommendation.fromJson(Map<String, dynamic> j) => Recommendation(
+        rank: j['rank'] as int,
+        recipe: RecipeSummary.fromJson(j['recipe'] as Map<String, dynamic>),
+        matchScore: _d(j['match_score']),
+        weightedScore: _d(j['weighted_score']),
+        missingCount: j['missing_count'] as int,
+        missingIngredients: _strings(j['missing_ingredients']),
+      );
+
+  final int rank;
+  final RecipeSummary recipe;
+  final double matchScore;
+  final double weightedScore;
+  final int missingCount;
+  final List<String> missingIngredients;
+
+  /// The match shown to people: weighted, so a missing garnish costs less than a missing core ingredient.
+  int get matchPercent => (weightedScore * 100).round();
+}
+
+class Recommendations {
+  const Recommendations({required this.runId, required this.inventoryCount, required this.items});
+
+  factory Recommendations.fromJson(Map<String, dynamic> j) => Recommendations(
+        runId: j['run_id'] as String,
+        inventoryCount: j['inventory_count'] as int,
+        items: [for (final i in j['items'] as List) Recommendation.fromJson(i as Map<String, dynamic>)],
+      );
+
+  final String runId;
+  final int inventoryCount;
+  final List<Recommendation> items;
+}
+
+class RecipeIngredient {
+  const RecipeIngredient({
+    required this.ingredient,
+    required this.quantity,
+    required this.unit,
+    required this.role,
+    this.note,
+    required this.isPantryStaple,
+    required this.inFridge,
+  });
+
+  factory RecipeIngredient.fromJson(Map<String, dynamic> j) => RecipeIngredient(
+        ingredient: IngredientRef.fromJson(j['ingredient'] as Map<String, dynamic>),
+        quantity: _d(j['quantity']),
+        unit: j['unit'] as String,
+        role: j['role'] as String,
+        note: j['note'] as String?,
+        isPantryStaple: j['is_pantry_staple'] as bool,
+        inFridge: j['in_fridge'] as bool,
+      );
+
+  final IngredientRef ingredient;
+  final double quantity;
+  final String unit;
+  final String role;
+  final String? note;
+  final bool isPantryStaple;
+  final bool inFridge;
+}
+
+class RecipeDetail {
+  const RecipeDetail({required this.summary, required this.ingredients, required this.steps, required this.saved});
+
+  factory RecipeDetail.fromJson(Map<String, dynamic> j) => RecipeDetail(
+        summary: RecipeSummary.fromJson(j),
+        ingredients: [for (final i in j['ingredients'] as List) RecipeIngredient.fromJson(i as Map<String, dynamic>)],
+        steps: _strings(j['steps']),
+        saved: j['saved'] as bool,
+      );
+
+  final RecipeSummary summary;
+  final List<RecipeIngredient> ingredients;
+  final List<String> steps;
+  final bool saved;
+
+  /// Ingredients you have out of those that count, matching the backend's match score:
+  /// pantry staples (salt, oil, spices) are assumed to be in the kitchen.
+  ({int have, int total}) get coverage {
+    final counted = [for (final i in ingredients) if (!i.isPantryStaple) i];
+    return (have: counted.where((i) => i.inFridge).length, total: counted.length);
+  }
+
+  RecipeDetail copyWith({bool? saved}) =>
+      RecipeDetail(summary: summary, ingredients: ingredients, steps: steps, saved: saved ?? this.saved);
+}
+
+/// What "I cooked this" returned: the ingredients taken out of the fridge.
+class CookedResult {
+  const CookedResult(this.removed);
+
+  final List<IngredientRef> removed;
+}
+
 /// The user's decision for one detection on the review screen.
 enum ReviewAction { accept, reject, relabel }
 
