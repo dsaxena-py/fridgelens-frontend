@@ -2,11 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/auth/sign_in_screen.dart';
-import 'features/home/home_placeholder.dart';
+import 'features/fridge/fridge_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/scan/camera_screen.dart';
+import 'features/scan/review_screen.dart';
+import 'features/scan/scan_providers.dart';
+import 'features/settings/settings_screen.dart';
 import 'state/providers.dart';
 
-/// Signed out: onboarding the first time, sign-in after that. Signed in: home.
+/// Signed out: onboarding the first time, sign-in after that. Signed in: the fridge.
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
   final router = GoRouter(
@@ -19,7 +23,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (public) return null;
         return ref.read(settingsProvider).onboardingSeen ? '/sign-in' : '/onboarding';
       }
-      return public ? '/home' : null;
+      if (public) return '/home';
+      // The review screen needs its scan; if it is opened without one (e.g. after a restart), go home.
+      if (location == '/scan/review' && state.extra is! ScanReviewArgs) return '/home';
+      return null;
     },
     routes: [
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
@@ -27,7 +34,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sign-in',
         builder: (context, state) => SignInScreen(signUp: state.uri.queryParameters['mode'] == 'sign-up'),
       ),
-      GoRoute(path: '/home', builder: (context, state) => const HomePlaceholder()),
+      GoRoute(path: '/home', builder: (context, state) => const FridgeScreen()),
+      GoRoute(path: '/scan', builder: (context, state) => const CameraScreen()),
+      GoRoute(path: '/scan/review', builder: (context, state) => ReviewScreen(args: state.extra! as ScanReviewArgs)),
+      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
     ],
   );
   ref.onDispose(router.dispose);

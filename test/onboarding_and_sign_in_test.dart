@@ -93,9 +93,12 @@ void main() {
       expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget); // not colour alone
 
       await _fillAndSubmit(tester, email: 'cook@example.com', password: 'correct-horse');
-      expect(find.text("You're signed in"), findsOneWidget);
-      expect(find.text('cook@example.com'), findsOneWidget);
+      expect(find.text('Your fridge is empty'), findsOneWidget);
 
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('cook@example.com'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Sign out'), 200, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.text('Sign out'));
       await tester.pumpAndSettle();
       expect(find.text('Welcome back'), findsOneWidget);
@@ -113,7 +116,7 @@ void main() {
 
       await _fillAndSubmit(tester, name: 'Dhiransh', email: 'new@example.com', password: 'long-enough');
       expect(app.auth.calls.last, 'signUp new@example.com Dhiransh');
-      expect(find.text("You're signed in"), findsOneWidget);
+      expect(find.text('Your fridge is empty'), findsOneWidget);
     });
 
     testWidgets('when email confirmation is on, explains what to do next', (tester) async {

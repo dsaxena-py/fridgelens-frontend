@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
+import '../data/api.dart';
 import '../data/auth.dart';
+import '../data/models.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError('overridden in main'));
 
@@ -56,3 +58,47 @@ class SettingsNotifier extends Notifier<AppSettings> {
 }
 
 final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
+
+// ---------- Backend ----------
+
+final apiProvider = Provider<MealLensApi>((ref) {
+  final auth = ref.watch(authProvider);
+  final baseUrl = ref.watch(settingsProvider.select((s) => s.apiBaseUrl));
+  return HttpMealLensApi(baseUrl: baseUrl, token: auth.accessToken);
+});
+
+// ---------- Fridge ----------
+
+class InventoryNotifier extends AsyncNotifier<List<InventoryItem>> {
+  MealLensApi get _api => ref.read(apiProvider);
+
+  @override
+  Future<List<InventoryItem>> build() => ref.watch(apiProvider).inventory();
+
+  /// After a confirmed scan the backend returns the whole fridge; show it without refetching.
+  void replace(List<InventoryItem> items) => state = AsyncData(items);
+
+  Future<void> add(int ingredientId) async {
+    await _api.addToFridge(ingredientId);
+    state = AsyncData(await _api.inventory());
+  }
+
+  Future<void> setExpiry(InventoryItem item, DateTime? date) async {
+    await _api.setExpiry(item.id, date);
+    state = AsyncData(await _api.inventory());
+  }
+
+  /// Removes at once on screen; puts the item back if the server refuses.
+  Future<void> remove(InventoryItem item) async {
+    final before = state.value ?? const <InventoryItem>[];
+    state = AsyncData([for (final i in before) if (i.id != item.id) i]);
+    try {
+      await _api.removeItem(item.id);
+    } catch (_) {
+      state = AsyncData(before);
+      rethrow;
+    }
+  }
+}
+
+final inventoryProvider = AsyncNotifierProvider<InventoryNotifier, List<InventoryItem>>(InventoryNotifier.new);

@@ -68,5 +68,19 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+	<string>MealLens uses the camera to photograph your fridge and find the ingredients in it.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a photo of your fridge or pantry to find the ingredients in it.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MealLens connects to its server on your Wi-Fi network.</string>
+	<!-- The development server runs on a laptop over plain http. Remove before an App Store release. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 	</dict>
+</dict>
 </plist>

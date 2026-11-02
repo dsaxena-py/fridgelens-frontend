@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -36,10 +37,18 @@ class MissingConfig implements Exception {
 /// Shows the splash screen while start-up runs, then the app. The splash stays at least long
 /// enough for the wordmark to fade in, unless the system asks for reduced motion.
 class MealLensRoot extends StatefulWidget {
-  const MealLensRoot({super.key, this.startup = defaultStartup, this.minimumSplash = const Duration(milliseconds: 900)});
+  const MealLensRoot({
+    super.key,
+    this.startup = defaultStartup,
+    this.minimumSplash = const Duration(milliseconds: 900),
+    this.overrides = const [],
+  });
 
   final Future<Startup> Function() startup;
   final Duration minimumSplash;
+
+  /// Extra provider overrides; tests use them to swap in a fake backend and camera.
+  final List<Override> overrides;
 
   @override
   State<MealLensRoot> createState() => _MealLensRootState();
@@ -99,6 +108,7 @@ class _MealLensRootState extends State<MealLensRoot> {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(ready.prefs),
         authProvider.overrideWithValue(ready.auth),
+        ...widget.overrides,
       ],
       child: const MealLensApp(),
     );

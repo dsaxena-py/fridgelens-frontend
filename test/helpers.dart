@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:meallens/app.dart';
 import 'package:meallens/data/auth.dart';
+import 'package:meallens/state/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fakes.dart';
 
 class FakeAuth extends AuthService {
   FakeAuth({this.password = 'correct-horse', this.requireConfirmation = false});
@@ -46,15 +50,19 @@ class FakeAuth extends AuthService {
   }
 }
 
-/// Pumps the whole app (splash included) with a fake sign-in service and in-memory preferences.
-Future<({FakeAuth auth, SharedPreferences prefs})> pumpApp(
+/// Pumps the whole app (splash included) with a fake sign-in service, a fake backend and
+/// in-memory preferences.
+Future<({FakeAuth auth, SharedPreferences prefs, FakeApi api})> pumpApp(
   WidgetTester tester, {
   Map<String, Object> prefs = const {},
   FakeAuth? auth,
   Size size = const Size(390, 844),
   double textScale = 1,
   Brightness brightness = Brightness.light,
+  List<Override> overrides = const [],
+  FakeApi? api,
 }) async {
+  final backend = api ?? FakeApi();
   GoogleFonts.config.allowRuntimeFetching = false;
   SharedPreferences.setMockInitialValues(prefs);
   final sp = await SharedPreferences.getInstance();
@@ -69,7 +77,8 @@ Future<({FakeAuth auth, SharedPreferences prefs})> pumpApp(
   await tester.pumpWidget(MealLensRoot(
     startup: () async => Startup(prefs: sp, auth: fake),
     minimumSplash: Duration.zero,
+    overrides: [apiProvider.overrideWithValue(backend), ...overrides],
   ));
   await tester.pumpAndSettle();
-  return (auth: fake, prefs: sp);
+  return (auth: fake, prefs: sp, api: backend);
 }

@@ -4,9 +4,17 @@ Flutter app for Android and iOS. It follows the MealLens brand guidelines: the M
 and Graphite Mint themes, Nunito Sans (Regular 400 and Medium 500 only), the Plate Focus mark,
 soft rounded shapes and calm, reduced-motion-aware animation.
 
-**Built so far (step 1):** native launch screen and app icon, splash screen, three onboarding
-pages, and sign-in / create account with Supabase Auth (email and password). After signing in
-you land on a placeholder screen; the fridge, scanning and recipes come in the next steps.
+**Built so far:**
+
+- **Step 1:** native launch screen and app icon, splash screen, three onboarding pages, and
+  sign-in / create account with Supabase Auth (email and password).
+- **Step 2:** the fridge (use-soon items first, labelled freshness, add by hand, best-before
+  dates, swipe to remove with undo), scanning (camera with corner markers, or a gallery photo),
+  the review screen (boxes on the photo; confirm, change or remove each item; uncertain items
+  ask a question that must be answered; add what was missed), and Settings (server address
+  with a connection test, appearance, sign out).
+
+Recipes come in step 3.
 
 ## Run it
 
@@ -16,7 +24,8 @@ you land on a placeholder screen; the fridge, scanning and recipes come in the n
    - `SUPABASE_PUBLISHABLE_KEY`: Supabase dashboard → Project Settings → API Keys. Use the
      publishable key (or the legacy anon key). It is safe in the app; RLS protects the data.
      **Never** put the service-role key here.
-   - `API_BASE_URL`: the backend on your laptop, e.g. `http://192.168.1.20:8000` (not used yet).
+   - `API_BASE_URL`: the backend on your laptop, e.g. `http://192.168.1.20:8000`. You can also
+     change it in the app under Settings, which is easier when the laptop's address changes.
 3. Run:
    ```bash
    flutter pub get
@@ -24,6 +33,18 @@ you land on a placeholder screen; the fridge, scanning and recipes come in the n
    ```
 
 `config.json` is git-ignored.
+
+### Talking to the backend on your laptop
+
+1. Start the backend with `--host 0.0.0.0` (see the backend README).
+2. Put the phone and laptop on the same Wi-Fi network.
+3. In the app, open Settings (the sliders icon on the fridge screen), enter
+   `http://<laptop address>:8000` and tap **Save and test connection**.
+
+The app is allowed to use plain `http` for this: `usesCleartextTraffic` on Android, and
+`NSAllowsArbitraryLoads` on iOS. Both are development settings to remove before a store release.
+On the Android emulator the laptop is `http://10.0.2.2:8000`. The emulator has no real camera,
+so use **Gallery** there.
 
 ### Email confirmation
 
@@ -41,8 +62,9 @@ lib/
   theme/                     brand tokens (colours, spacing, radii) and the Material theme
   widgets/logo.dart          Plate Focus mark (drawn in code) and the horizontal lockup
   data/auth.dart             Supabase Auth, with friendly error messages
-  state/providers.dart       Riverpod providers: settings, auth
-  features/                  splash, onboarding, auth, home placeholder
+  state/providers.dart       Riverpod providers: settings, auth, backend, fridge
+  data/api.dart              backend client with friendly error messages
+  features/                  splash, onboarding, auth, fridge, scan (camera, review), settings
 assets/
   google_fonts/              Nunito Sans Regular and Medium, bundled (no runtime downloads)
   brand/                     launch-screen and icon images
@@ -58,9 +80,27 @@ flutter analyze
 flutter test test/
 ```
 
-The tests cover start-up (splash, slow start, retry, missing settings), every onboarding path,
-form validation, sign-in errors, the email-confirmation path and sign-out. They also check light
-and dark mode, and a small phone at 200% text size without overflow.
+The widget tests use a fake backend and camera. They cover:
+
+- **Step 1:** start-up (splash, slow start, retry, missing settings), every onboarding path,
+  form validation, sign-in errors, the email-confirmation path and sign-out.
+- **Step 2:** the empty and filled fridge, adding by hand, removing with undo, and the full scan
+  review (yes/no on uncertain items, changing, removing, adding missed items, and exactly what
+  is sent to the backend). Also nothing found, a failed scan, an upload error, and the server
+  address check.
+
+They also check light and dark mode and large text on a small phone.
+
+### Contract test
+
+`test/contract/` runs the app's real HTTP client against a running backend: search, upload a
+photo, confirm, the 409 on a second confirm, add, set and clear a best-before date, remove, and
+an invalid token. It is skipped unless these are set:
+
+```bash
+MEALLENS_API_URL=http://127.0.0.1:8000 MEALLENS_TOKEN=<a Supabase access token> \
+MEALLENS_PHOTO=path/to/fridge.jpg flutter test test/contract
+```
 
 ## Brand assets
 
