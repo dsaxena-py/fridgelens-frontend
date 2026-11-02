@@ -156,6 +156,8 @@ void main() {
       await tester.tap(find.byTooltip('4 of 5'));
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 6)); // let the "Enjoy your meal" message go
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Browse'));
