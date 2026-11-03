@@ -56,7 +56,7 @@ class FridgeScreen extends ConsumerWidget {
         AsyncData(:final value) when value.isEmpty => EmptyState(
             icon: Icons.kitchen_outlined,
             title: 'Your fridge is empty',
-            message: 'Take a photo of a shelf or counter and we will list what we find.',
+            message: 'Lay your ingredients out on a table and take a photo. We will list what we find.',
             action: FilledButton.icon(
               onPressed: () => context.push('/scan'),
               icon: const Icon(Icons.center_focus_weak_rounded),

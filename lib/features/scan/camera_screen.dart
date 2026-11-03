@@ -149,7 +149,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
               child: _error != null
                   ? InlineBanner(text: _error!, isError: true)
                   : Text(
-                      _processing != null ? 'Finding ingredients…' : 'Keep ingredients visible and use even lighting.',
+                      _processing != null ? 'Finding ingredients…' : 'Spread ingredients out on a table, in even light.',
                       style: text.bodyLarge?.copyWith(color: GraphiteMint.textMuted),
                       textAlign: TextAlign.center,
                     ),
@@ -199,7 +199,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         ),
       _CameraState.unavailable => _Notice(
           icon: Icons.photo_library_outlined,
-          text: 'No camera is available here. Choose a photo of your fridge instead.',
+          text: 'No camera is available here. Choose a photo of your ingredients instead.',
         ),
       _ => const Center(child: CircularProgressIndicator(color: GraphiteMint.accent)),
     };

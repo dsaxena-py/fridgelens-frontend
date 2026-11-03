@@ -17,9 +17,9 @@ class _Page {
 
 const _pages = [
   _Page('See what you can make with the food you already have.',
-      'MealLens turns a quick photo of your fridge into a list of ingredients and ideas for meals.'),
+      'MealLens turns a quick photo of your groceries into a list of ingredients and ideas for meals.'),
   _Page('Scan, then take a quick look.',
-      'Keep ingredients visible and use even lighting. We show what we found, and you confirm or change anything.'),
+      'Spread ingredients out on a table so each one is visible. We show what we found, and you confirm or change anything.'),
   _Page('Cook with what you have.',
       'Recipes are sorted by how many of their ingredients you already have, with estimated nutrition information.'),
 ];
